@@ -5,12 +5,27 @@ import math
 import random
 import bisect
 
-class uniformGenerator(object):
-    pass
-
-
 class biasUniformGenerator(object):
-    pass
+    def __init__(self, N, pdf):
+        self.distMap = reduce(lambda sums, x: sums + [sums[-1] + x], pdf, [0])
+    
+    def get(self):
+        return bisect.bisect(self.distMap, random.random())
+
+    def get_indx(self):
+        return self.get() - 1
+
+
+class uniformGenerator(biasUniformGenerator):
+    def __init__(self, N):
+        pdf = [1. / N for k in xrange(N)]
+        biasUniformGenerator.__init__(self, N, pdf)
+    
+    def get(self):
+        return biasUniformGenerator.get(self)
+
+    def get_indx(self):
+        return biasUniformGenerator.get_indx(self)
 
 
 class zipfGenerator(object):
@@ -40,7 +55,6 @@ class reverseZipfGenerator(zipfGenerator):
 
 
 class dataGen(object):
-    
     def __init__(self, query_size, role_size, table_size, column_size, params):
         self.query_size = query_size
         self.role_size = 4 # In current impl, ROLE_SIZE is fixed with 4
@@ -87,10 +101,68 @@ class dataGen(object):
         return (query, table_columns)
 
     def _gen_third_role_data(self):
-        return ('SELECT * FROM hackday;', set()) 
+        query_commands = ['SELECT', 'INSERT', 'DELETE', 'UPDATE']
+        qcgen = biasUniformGenerator(len(query_commands), [0.1, 0.1, 0.1, 0.7])
+        qc = query_commands[qcgen.get_indx()]
+        query_tables = set()
+        table_columns = {}
+        tgen1 = uniformGenerator(self.table_size)
+        tgen2 = zipfGenerator(self.table_size, self.s)
+        cgen1 = uniformGenerator(self.column_size)
+        cgen2 = zipfGenerator(self.column_size, self.s)
+        if qc in {'SELECT', 'INSERT', 'DELETE'}:
+            for k in xrange(self.table_size):
+                query_tables.add(self.table_list[tgen1.get_indx()])
+            for table in query_tables:
+                columns = set()
+                for k in xrange(self.column_size):
+                    columns.add(self.column_list[cgen1.get_indx()])
+                table_columns[table] = columns
+        elif qc == 'UPDATE':
+            for k in xrange(self.table_size):
+                query_tables.add(self.table_list[tgen2.get_indx()])
+            for table in query_tables:
+                columns = set()
+                for k in xrange(self.column_size):
+                    columns.add(self.column_list[cgen2.get_indx()])
+                table_columns[table] = columns
+        else:
+            # TODO
+            pass
+        query = self._assemble(qc, query_tables, table_columns)
+        return (query, table_columns)
 
     def _gen_forth_role_data(self):
-        return ('SELECT * FROM hackday;', set()) 
+        query_commands = ['SELECT', 'INSERT', 'DELETE', 'UPDATE']
+        qcgen = biasUniformGenerator(len(query_commands), [0.1, 0.1, 0.1, 0.7])
+        qc = query_commands[qcgen.get_indx()]
+        query_tables = set()
+        table_columns = {}
+        tgen1 = uniformGenerator(self.table_size)
+        tgen2 = reverseZipfGenerator(self.table_size, self.s)
+        cgen1 = uniformGenerator(self.column_size)
+        cgen2 = reverseZipfGenerator(self.column_size, self.s)
+        if qc in {'SELECT', 'INSERT', 'DELETE'}:
+            for k in xrange(self.table_size):
+                query_tables.add(self.table_list[tgen1.get_indx()])
+            for table in query_tables:
+                columns = set()
+                for k in xrange(self.column_size):
+                    columns.add(self.column_list[cgen1.get_indx()])
+                table_columns[table] = columns
+        elif qc == 'UPDATE':
+            for k in xrange(self.table_size):
+                query_tables.add(self.table_list[tgen2.get_indx()])
+            for table in query_tables:
+                columns = set()
+                for k in xrange(self.column_size):
+                    columns.add(self.column_list[cgen2.get_indx()])
+                table_columns[table] = columns
+        else:
+            # TODO
+            pass
+        query = self._assemble(qc, query_tables, table_columns)
+        return (query, table_columns)
     
     def generate(self, output, mode = 'query'):
         f = file(output, 'w')
@@ -106,6 +178,7 @@ class dataGen(object):
                 (query, tpl) = self._gen_third_role_data()
             else: # role_indx == 3
                 (query, tpl) = self._gen_forth_role_data()
+            
             if mode == 'query':
                 f.write('%s|%s\n' % (role, query))
             elif mode == 'tuple':
@@ -115,10 +188,16 @@ class dataGen(object):
         f.close()
 
 
+def usage():
+    ZIPF_10_5 = zipfGenerator(10, 5.)
+    for i in xrange(100):
+        print ZIPF_10_5.get()
+    RZIPF_10_5 = reverseZipfGenerator(10, 5.)
+    print RZIPF_10_5.get_indx()
+    
+
 if __name__ == '__main__':
-    #ZIPF_10_5 = zipfGenerator(10, 5.)
-    #for i in xrange(1000):
-    #    ZIPF_10_5.get()
+    #usage()
     data = dataGen(5000, 4, 100, 20, {'s': 3.})
     data.generate('train', 'all')
     #RZIPF_10_5 = reverseZipfGenerator(10, 5.)
