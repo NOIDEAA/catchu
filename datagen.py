@@ -5,6 +5,14 @@ import math
 import random
 import bisect
 
+class uniformGenerator(object):
+    pass
+
+
+class biasUniformGenerator(object):
+    pass
+
+
 class zipfGenerator(object):
     def __init__(self, N, s):
         pdf = [1. / math.pow(float(i), s) for i in xrange(1, N+1)]
@@ -20,13 +28,15 @@ class zipfGenerator(object):
 
 class reverseZipfGenerator(zipfGenerator):
     def __init__(self, N, s):
-        zipfGenerator.__init__(N, s)
+        zipfGenerator.__init__(self, N, s)
+        self.N = N
 
     def get(self):
-        pass
+        v = bisect.bisect(self.distMap, random.random())
+        return self.N + 1 - v 
 
     def get_indx(self):
-        pass
+        return self.get() - 1
 
 
 class dataGen(object):
@@ -61,7 +71,20 @@ class dataGen(object):
         return (query, table_columns)
 
     def _gen_second_role_data(self):
-        return ('SELECT * FROM hackday;', set()) 
+        query_command = 'SELECT'
+        query_tables = set()
+        table_columns = {}
+        tgen = reverseZipfGenerator(self.table_size, self.s)
+        for k in xrange(self.table_size):
+            query_tables.add(self.table_list[tgen.get_indx()]) 
+        for table in query_tables:
+            columns = set()
+            cgen = reverseZipfGenerator(self.column_size, self.s)
+            for k in xrange(self.column_size):
+                columns.add(self.column_list[cgen.get_indx()])
+            table_columns[table] = columns
+        query = self._assemble(query_command, query_tables, table_columns)
+        return (query, table_columns)
 
     def _gen_third_role_data(self):
         return ('SELECT * FROM hackday;', set()) 
@@ -74,6 +97,7 @@ class dataGen(object):
         rgen = zipfGenerator(self.role_size, self.s)
         for k in xrange(self.query_size):
             role_indx = rgen.get_indx()
+            role = self.role_list[role_indx]
             if role_indx == 0:
                 (query, tpl) = self._gen_first_role_data()
             elif role_indx == 1:
@@ -83,18 +107,19 @@ class dataGen(object):
             else: # role_indx == 3
                 (query, tpl) = self._gen_forth_role_data()
             if mode == 'query':
-                f.write(query + '\n')
+                f.write('%s|%s\n' % (role, query))
             elif mode == 'tuple':
-                f.write(str(tpl) + '\n')
+                f.write('%s|%s\n' % (role, tpl))
             elif mode == 'all':
-                f.write(query + '\n')
-                f.write(str(tpl) + '\n')
+                f.write('%s|%s|%s\n' % (role, query, tpl))
         f.close()
 
 
 if __name__ == '__main__':
-    ZIPF_10_5 = zipfGenerator(10, 5.)
-    for i in xrange(1000):
-        ZIPF_10_5.get()
+    #ZIPF_10_5 = zipfGenerator(10, 5.)
+    #for i in xrange(1000):
+    #    ZIPF_10_5.get()
     data = dataGen(5000, 4, 100, 20, {'s': 3.})
-    data.generate('log', 'all')
+    data.generate('train', 'all')
+    #RZIPF_10_5 = reverseZipfGenerator(10, 5.)
+    #print RZIPF_10_5.get_indx()
