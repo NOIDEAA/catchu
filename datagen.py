@@ -65,13 +65,14 @@ class dataGen(object):
         self.table_list = ['TABLE' + str(k+1) for k in xrange(self.table_size)]
         self.column_list = ['COLUMN' + str(k+1) for k in xrange(self.column_size)]
     
-    def _assemble(self, query_command, query_tables, table_columns):
+    def _assemble(self, query_command, query_tables, table_columns, condition_table_columns):
         return 'SELECT * FROM hackday;'
 
     def _gen_first_role_data(self):
         query_command = 'SELECT'
         query_tables = set()
         table_columns = {}
+        condition_table_columns = {}
         tgen = zipfGenerator(self.table_size, self.s)
         for k in xrange(self.table_size):
             query_tables.add(self.table_list[tgen.get_indx()]) 
@@ -81,13 +82,20 @@ class dataGen(object):
             for k in xrange(self.column_size):
                 columns.add(self.column_list[cgen.get_indx()])
             table_columns[table] = columns
-        query = self._assemble(query_command, query_tables, table_columns)
-        return (query, table_columns)
+        for table in query_tables:
+            columns = set()
+            cgen = zipfGenerator(self.column_size, self.s)
+            for k in xrange(self.column_size):
+                columns.add(self.column_list[cgen.get_indx()])
+            condition_table_columns[table] = columns
+        query = self._assemble(query_command, query_tables, table_columns, condition_table_columns)
+        return (query, 'SELECT', table_columns, condition_table_columns)
 
     def _gen_second_role_data(self):
         query_command = 'SELECT'
         query_tables = set()
         table_columns = {}
+        condition_table_columns = {}
         tgen = reverseZipfGenerator(self.table_size, self.s)
         for k in xrange(self.table_size):
             query_tables.add(self.table_list[tgen.get_indx()]) 
@@ -97,8 +105,14 @@ class dataGen(object):
             for k in xrange(self.column_size):
                 columns.add(self.column_list[cgen.get_indx()])
             table_columns[table] = columns
-        query = self._assemble(query_command, query_tables, table_columns)
-        return (query, table_columns)
+        for table in query_tables:
+            columns = set()
+            cgen = reverseZipfGenerator(self.column_size, self.s)
+            for k in xrange(self.column_size):
+                columns.add(self.column_list[cgen.get_indx()])
+            condition_table_columns[table] = columns
+        query = self._assemble(query_command, query_tables, table_columns, condition_table_columns)
+        return (query, 'SELECT', table_columns, condition_table_columns)
 
     def _gen_third_role_data(self):
         query_commands = ['SELECT', 'INSERT', 'DELETE', 'UPDATE']
@@ -106,11 +120,12 @@ class dataGen(object):
         qc = query_commands[qcgen.get_indx()]
         query_tables = set()
         table_columns = {}
+        condition_table_columns = {}
         tgen1 = uniformGenerator(self.table_size)
         tgen2 = zipfGenerator(self.table_size, self.s)
         cgen1 = uniformGenerator(self.column_size)
         cgen2 = zipfGenerator(self.column_size, self.s)
-        if qc in {'SELECT', 'INSERT', 'DELETE'}:
+        if qc == 'SELECT':
             for k in xrange(self.table_size):
                 query_tables.add(self.table_list[tgen1.get_indx()])
             for table in query_tables:
@@ -118,6 +133,20 @@ class dataGen(object):
                 for k in xrange(self.column_size):
                     columns.add(self.column_list[cgen1.get_indx()])
                 table_columns[table] = columns
+            for table in query_tables:
+                columns = set()
+                for k in xrange(self.column_size):
+                    columns.add(self.column_list[cgen1.get_indx()])
+                condition_table_columns[table] = columns
+        elif qc == 'INSERT':
+            query_tables.add(self.table_list[tgen1.get_indx()])
+        elif qc == 'DELETE':
+            query_tables.add(self.table_list[tgen1.get_indx()])
+            for table in query_tables:
+                columns = set()
+                for k in xrange(self.column_size):
+                    columns.add(self.column_list[cgen1.get_indx()])
+                condition_table_columns[table] = columns
         elif qc == 'UPDATE':
             for k in xrange(self.table_size):
                 query_tables.add(self.table_list[tgen2.get_indx()])
@@ -126,11 +155,16 @@ class dataGen(object):
                 for k in xrange(self.column_size):
                     columns.add(self.column_list[cgen2.get_indx()])
                 table_columns[table] = columns
+            for table in query_tables:
+                columns = set()
+                for k in xrange(self.column_size):
+                    columns.add(self.column_list[cgen2.get_indx()])
+                condition_table_columns[table] = columns
         else:
             # TODO
             pass
-        query = self._assemble(qc, query_tables, table_columns)
-        return (query, table_columns)
+        query = self._assemble(qc, query_tables, table_columns, condition_table_columns)
+        return (query, qc, table_columns, condition_table_columns)
 
     def _gen_forth_role_data(self):
         query_commands = ['SELECT', 'INSERT', 'DELETE', 'UPDATE']
@@ -138,11 +172,12 @@ class dataGen(object):
         qc = query_commands[qcgen.get_indx()]
         query_tables = set()
         table_columns = {}
+        condition_table_columns = {}
         tgen1 = uniformGenerator(self.table_size)
         tgen2 = reverseZipfGenerator(self.table_size, self.s)
         cgen1 = uniformGenerator(self.column_size)
         cgen2 = reverseZipfGenerator(self.column_size, self.s)
-        if qc in {'SELECT', 'INSERT', 'DELETE'}:
+        if qc == 'SELECT':
             for k in xrange(self.table_size):
                 query_tables.add(self.table_list[tgen1.get_indx()])
             for table in query_tables:
@@ -150,6 +185,20 @@ class dataGen(object):
                 for k in xrange(self.column_size):
                     columns.add(self.column_list[cgen1.get_indx()])
                 table_columns[table] = columns
+            for table in query_tables:
+                columns = set()
+                for k in xrange(self.column_size):
+                    columns.add(self.column_list[cgen1.get_indx()])
+                condition_table_columns[table] = columns
+        elif qc == 'INSERT':
+            query_tables.add(self.table_list[tgen1.get_indx()])
+        elif qc == 'DELETE':
+            query_tables.add(self.table_list[tgen1.get_indx()])
+            for table in query_tables:
+                columns = set()
+                for k in xrange(self.column_size):
+                    columns.add(self.column_list[cgen1.get_indx()])
+                condition_table_columns[table] = columns
         elif qc == 'UPDATE':
             for k in xrange(self.table_size):
                 query_tables.add(self.table_list[tgen2.get_indx()])
@@ -158,11 +207,32 @@ class dataGen(object):
                 for k in xrange(self.column_size):
                     columns.add(self.column_list[cgen2.get_indx()])
                 table_columns[table] = columns
+            for table in query_tables:
+                columns = set()
+                for k in xrange(self.column_size):
+                    columns.add(self.column_list[cgen2.get_indx()])
+                condition_table_columns[table] = columns
         else:
             # TODO
             pass
-        query = self._assemble(qc, query_tables, table_columns)
-        return (query, table_columns)
+        query = self._assemble(qc, query_tables, table_columns, condition_table_columns)
+        return (query, qc, table_columns, condition_table_columns)
+
+    # 'T1#A1,A3,A2*T3#A9,A8,A7*T2#A5,A4,A6'
+    def _pickle(self, f, role, command, table_columns, condition_table_columns):
+        def pickle_dict_str_set(D):
+            S = ''
+            for k, v in D.items():
+                S += str(k) + '#'
+                for vv in v:
+                    S += str(vv) + ','
+                S = S.strip(',')
+                S += '*'
+            S = S.strip('*')
+            return S
+
+        table_columns_str, condition_table_columns_str = pickle_dict_str_set(table_columns), pickle_dict_str_set(condition_table_columns)
+        f.write('%s|%s|%s|%s\n' % (role, command, table_columns_str, condition_table_columns_str))
     
     def generate(self, output, mode = 'query'):
         f = file(output, 'w')
@@ -171,20 +241,22 @@ class dataGen(object):
             role_indx = rgen.get_indx()
             role = self.role_list[role_indx]
             if role_indx == 0:
-                (query, tpl) = self._gen_first_role_data()
+                (query, cmd, tpl, condition) = self._gen_first_role_data()
             elif role_indx == 1:
-                (query, tpl) = self._gen_second_role_data()
+                (query, cmd, tpl, condition) = self._gen_second_role_data()
             elif role_indx == 2:
-                (query, tpl) = self._gen_third_role_data()
+                (query, cmd, tpl, condition) = self._gen_third_role_data()
             else: # role_indx == 3
-                (query, tpl) = self._gen_forth_role_data()
+                (query, cmd, tpl, condition) = self._gen_forth_role_data()
             
-            if mode == 'query':
-                f.write('%s|%s\n' % (role, query))
+            if mode == 'train':
+                self._pickle(f, role, cmd, tpl, condition)
+            elif mode == 'query':
+                f.write('%s|%s|%s\n' % (role, query, condition))
             elif mode == 'tuple':
-                f.write('%s|%s\n' % (role, tpl))
+                f.write('%s|%s|%s\n' % (role, tpl, condition))
             elif mode == 'all':
-                f.write('%s|%s|%s\n' % (role, query, tpl))
+                f.write('%s|%s|%s|%s\n' % (role, query, tpl, condition))
         f.close()
 
 
@@ -199,6 +271,4 @@ def usage():
 if __name__ == '__main__':
     #usage()
     data = dataGen(5000, 4, 100, 20, {'s': 3.})
-    data.generate('train', 'all')
-    #RZIPF_10_5 = reverseZipfGenerator(10, 5.)
-    #print RZIPF_10_5.get_indx()
+    data.generate('train', 'train')
