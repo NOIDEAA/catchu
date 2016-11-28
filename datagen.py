@@ -140,6 +140,8 @@ class dataGen(object):
                 condition_table_columns[table] = columns
         elif qc == 'INSERT':
             query_tables.add(self.table_list[tgen1.get_indx()])
+            for table in query_tables:
+                table_columns[table] = set()
         elif qc == 'DELETE':
             query_tables.add(self.table_list[tgen1.get_indx()])
             for table in query_tables:
@@ -148,8 +150,7 @@ class dataGen(object):
                     columns.add(self.column_list[cgen1.get_indx()])
                 condition_table_columns[table] = columns
         elif qc == 'UPDATE':
-            for k in xrange(self.table_size):
-                query_tables.add(self.table_list[tgen2.get_indx()])
+            query_tables.add(self.table_list[tgen2.get_indx()])
             for table in query_tables:
                 columns = set()
                 for k in xrange(self.column_size):
@@ -192,6 +193,8 @@ class dataGen(object):
                 condition_table_columns[table] = columns
         elif qc == 'INSERT':
             query_tables.add(self.table_list[tgen1.get_indx()])
+            for table in query_tables:
+                table_columns[table] = set()
         elif qc == 'DELETE':
             query_tables.add(self.table_list[tgen1.get_indx()])
             for table in query_tables:
@@ -200,8 +203,7 @@ class dataGen(object):
                     columns.add(self.column_list[cgen1.get_indx()])
                 condition_table_columns[table] = columns
         elif qc == 'UPDATE':
-            for k in xrange(self.table_size):
-                query_tables.add(self.table_list[tgen2.get_indx()])
+            query_tables.add(self.table_list[tgen2.get_indx()])
             for table in query_tables:
                 columns = set()
                 for k in xrange(self.column_size):
